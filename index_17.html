@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XXI SYSTEM — Automação, IA e Robôs para o seu negócio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  @property --c1{ syntax:'<color>'; inherits:true; initial-value:#2563ff; }
+  @property --c2{ syntax:'<color>'; inherits:true; initial-value:#00c2ff; }
+  @property --c3{ syntax:'<color>'; inherits:true; initial-value:#7c3aed; }
+  @property --tint{ syntax:'<number>'; inherits:true; initial-value:0; }
+
+  :root{
+    --c1:#2563ff; /* azul elétrico */
+    --c2:#00c2ff; /* ciano */
+    --c3:#7c3aed; /* roxo */
+    --tint:0; /* 0 = preto puro, sobe conforme desce a página */
+    --bg:#000000;
+    --ink:#f5f5f7;
+    --ink-dim:#9a9fae;
+    --ink-faint:#5a5f6e;
+    --line:rgba(255,255,255,.1);
+    --glass:rgba(255,255,255,.04);
+    --grad-a:#2563ff; /* azul — topo da página */
+    --grad-b:#7c3aed; /* roxo — final da página */
+    transition:--tint .3s ease;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;scroll-padding-top:78px;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    font-weight:300;
+    overflow-x:hidden;
+    position:relative;
+  }
+  ::selection{background:var(--c2);color:#000;}
+  a{color:inherit;}
+  .h,h1,h2,h3{font-family:'Space Grotesk',sans-serif;font-weight:600;letter-spacing:-.01em;}
+
+  #bg-canvas{
+    position:fixed;inset:0;width:100%;height:100%;z-index:0;
+    background:var(--bg);
+  }
+  #planet-canvas{
+    position:fixed;inset:0;width:100vw;height:100vh;z-index:1;
+    pointer-events:none;
+  }
+
+  .wrap{position:relative;z-index:2;}
+
+  /* ===== NAV ===== */
+  nav{
+    position:fixed;
+    top:0;left:0;right:0;z-index:50;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px 6vw;
+    backdrop-filter:blur(14px);
+    background: rgba(6,7,11,.35);
+    border-bottom:1px solid transparent;
+    overflow:hidden;
+    transition:background 1.2s ease;
+  }
+  nav::before{
+    content:'';position:absolute;left:0;right:0;bottom:0;height:1px;
+    background:linear-gradient(90deg,
+      transparent, var(--c1), var(--c2), var(--c3), transparent,
+      transparent, var(--c1), var(--c2), var(--c3), transparent);
+    background-size:200% 100%;
+    animation:navAurora 6s linear infinite;
+  }
+  nav::after{
+    content:'';position:absolute;inset:0;pointer-events:none;
+    background-image:
+      radial-gradient(1px 1px at 12% 40%, rgba(255,255,255,.5), transparent),
+      radial-gradient(1px 1px at 34% 70%, rgba(255,255,255,.35), transparent),
+      radial-gradient(1px 1px at 58% 30%, rgba(255,255,255,.45), transparent),
+      radial-gradient(1px 1px at 76% 65%, rgba(255,255,255,.3), transparent),
+      radial-gradient(1px 1px at 92% 45%, rgba(255,255,255,.4), transparent);
+    opacity:.6;
+  }
+  @keyframes navAurora{
+    0%{background-position:0% 50%;}
+    100%{background-position:200% 50%;}
+  }
+  .logo{display:flex;align-items:center;gap:10px;font-size:15px;letter-spacing:3px;text-transform:uppercase;}
+  .logo-mark{
+    width:32px;height:32px;border-radius:8px;flex-shrink:0;
+    object-fit:contain;
+    filter:drop-shadow(0 0 10px rgba(255,255,255,.55));
+    animation:logoPulse 3.4s ease-in-out infinite;
+  }
+  @keyframes logoPulse{
+    0%,100%{filter:drop-shadow(0 0 8px rgba(255,255,255,.4));}
+    50%{filter:drop-shadow(0 0 16px rgba(255,255,255,.75));}
+  }
+  .nav-links{display:flex;align-items:center;gap:34px;font-size:12.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-dim);}
+  .nav-links{display:flex;align-items:center;gap:10px;font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:800;}
+  .nav-links a{
+    position:relative;display:flex;align-items:center;justify-content:center;
+    height:34px;padding:0 18px;
+    background-color:transparent;
+    border:2px solid var(--line);
+    border-radius:30px;
+    color:var(--ink-dim);
+    cursor:pointer;overflow:hidden;
+    transition:all .5s ease-in-out;
+  }
+  .nav-links a span{position:relative;z-index:1;}
+  .nav-links a::after{
+    content:'';position:absolute;left:18px;top:50%;
+    width:8px;height:8px;margin-top:-4px;
+    background:linear-gradient(90deg,var(--c1),var(--c2),var(--c3));
+    border-radius:30px;visibility:hidden;
+    transition:all .5s ease-in-out, background 1.2s ease;
+    z-index:0;
+  }
+  .nav-links a:hover{
+    box-shadow:0 0 40px color-mix(in srgb, var(--c2) 45%, transparent);
+    color:#03040a;border-color:transparent;
+  }
+  .nav-links a:hover::after{
+    visibility:visible;
+    transform:scale(30) translateX(1px);
+  }
+  @media (max-width:900px){ .nav-links{display:none;} }
+
+  /* ===== NAV CTA — expansão radial ao passar o mouse ===== */
+  .nav-cta{
+    position:relative;display:flex;align-items:center;justify-content:center;
+    height:38px;padding:0 22px;
+    background-color:transparent;
+    border:2px solid var(--line);
+    border-radius:30px;
+    color:var(--ink);
+    font-size:11.5px;letter-spacing:2.5px;text-transform:uppercase;font-weight:800;
+    cursor:pointer;flex-shrink:0;overflow:hidden;
+    transition:all .5s ease-in-out;
+  }
+  .nav-cta span{position:relative;z-index:1;}
+  .nav-cta::after{
+    content:'';position:absolute;left:22px;top:50%;
+    width:10px;height:10px;margin-top:-5px;
+    background:linear-gradient(90deg,var(--c1),var(--c2),var(--c3));
+    border-radius:30px;visibility:hidden;
+    transition:all .5s ease-in-out, background 1.2s ease;
+    z-index:0;
+  }
+  .nav-cta:hover{
+    box-shadow:0 0 60px color-mix(in srgb, var(--c2) 55%, transparent);
+    color:#03040a;border-color:transparent;
+  }
+  .nav-cta:hover::after{
+    visibility:visible;
+    transform:scale(40) translateX(1px);
+  }
+  @media (max-width:900px){ .nav-cta{padding:0 16px;font-size:10.5px;height:34px;} }
+
+  /* ===== SECTION SHELL ===== */
+  section{
+    position:relative;
+    min-height:auto;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:44px 6vw 40px;
+    text-align:center;
+  }
+  .eyebrow{
+    font-size:11.5px;letter-spacing:4px;text-transform:uppercase;
+    color:var(--c2);margin-bottom:14px;
+    opacity:0;transform:translateY(16px);filter:blur(6px);
+    transition:opacity .8s ease, transform .8s ease, filter .8s ease;
+  }
+  .reveal{opacity:0;transform:translateY(26px);filter:blur(8px);transition:opacity .9s cubic-bezier(.2,.7,.2,1), transform .9s cubic-bezier(.2,.7,.2,1), filter .9s cubic-bezier(.2,.7,.2,1);}
+  .reveal.up{transition-delay:.08s;}
+  .reveal.up2{transition-delay:.18s;}
+  .reveal.up3{transition-delay:.28s;}
+  .in-view{opacity:1;transform:translateY(0);filter:blur(0);}
+  .fade-out{opacity:0;transform:translateY(-24px);filter:blur(6px);}
+
+  h1.title{font-size:clamp(30px,5.2vw,60px);line-height:1.05;max-width:15ch;}
+  h2.title{font-size:clamp(24px,3.6vw,40px);line-height:1.1;max-width:16ch;}
+  .lede{
+    margin-top:12px;font-size:clamp(15px,1.6vw,19px);line-height:1.6;
+    color:var(--ink-dim);max-width:52ch;font-weight:300;
+  }
+  .grad-text{
+    background:linear-gradient(90deg,var(--grad-a),var(--grad-b));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+
+  /* ===== HERO ===== */
+  .hero{padding-top:0;min-height:88vh;}
+  .hero-cta{display:flex;gap:16px;margin-top:22px;flex-wrap:wrap;justify-content:center;}
+  .btn{
+    padding:15px 30px;border-radius:999px;font-size:13px;letter-spacing:1px;text-transform:uppercase;
+    cursor:pointer;border:1px solid var(--line);background:transparent;color:var(--ink);
+    transition:all .3s ease;font-family:'Inter',sans-serif;
+  }
+  .btn.primary{
+    background:linear-gradient(90deg,var(--c1),var(--c2));
+    border:none;color:#03040a;font-weight:600;
+    box-shadow:0 0 30px color-mix(in srgb, var(--c2) 40%, transparent);
+    transition:box-shadow .3s ease, transform .3s ease, background 1.2s ease;
+  }
+  .btn.primary:hover{transform:translateY(-2px);box-shadow:0 0 44px color-mix(in srgb, var(--c2) 60%, transparent);}
+  .btn.ghost:hover{border-color:var(--c2);color:var(--c2);}
+  .scroll-cue{
+    position:absolute;bottom:40px;left:50%;transform:translateX(-50%);
+    font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--ink-faint);
+    display:flex;flex-direction:column;align-items:center;gap:10px;
+  }
+  .scroll-cue::after{
+    content:'';width:1px;height:34px;background:linear-gradient(var(--c2),transparent);
+    animation:pulseLine 2s ease-in-out infinite;
+  }
+  @keyframes pulseLine{0%,100%{opacity:.2;}50%{opacity:1;}}
+
+  /* ===== FLOW DIAGRAM (automação / robôs) ===== */
+  .flow{
+    display:flex;align-items:center;justify-content:center;gap:0;
+    margin-top:26px;flex-wrap:wrap;
+  }
+  .flow-step{
+    display:flex;flex-direction:column;align-items:center;gap:12px;
+    padding:22px 26px;border:1px solid var(--line);border-radius:16px;
+    background:var(--glass);backdrop-filter:blur(10px);min-width:140px;
+  }
+  .flow-step .dot{
+    width:44px;height:44px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, var(--c2), var(--c1));
+    box-shadow:0 0 24px color-mix(in srgb, var(--c2) 55%, transparent);
+    transition:background 1.2s ease, box-shadow 1.2s ease;
+  }
+  .flow-step span{font-size:11.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-dim);}
+  .flow-arrow{width:52px;height:1px;background:linear-gradient(90deg,var(--c1),var(--c3));position:relative;transition:background 1.2s ease;}
+  .flow-arrow::after{
+    content:'';position:absolute;right:-1px;top:50%;width:7px;height:7px;border-radius:50%;
+    background:var(--c2);transform:translateY(-50%);box-shadow:0 0 10px var(--c2);
+    animation:flowMove 2.2s linear infinite;
+  }
+  @keyframes flowMove{0%{left:0;opacity:0;}10%{opacity:1;}90%{opacity:1;}100%{left:100%;opacity:0;}}
+  @media (max-width:760px){ .flow{flex-direction:column;} .flow-arrow{width:1px;height:36px;} }
+
+  /* ===== AI CORE ===== */
+  .ai-core-wrap{position:relative;width:220px;height:220px;margin:24px auto 0;display:flex;align-items:center;justify-content:center;}
+  .ai-ring{position:absolute;border-radius:50%;border:1px solid color-mix(in srgb, var(--c2) 40%, transparent);animation:spin 18s linear infinite;}
+  .ai-ring.r1{inset:0;}
+  .ai-ring.r2{inset:34px;border-color:color-mix(in srgb, var(--c3) 40%, transparent);animation-duration:26s;animation-direction:reverse;}
+  .ai-ring.r3{inset:68px;border-color:color-mix(in srgb, var(--c1) 50%, transparent);animation-duration:12s;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .ai-core{
+    width:88px;height:88px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, var(--c2), var(--c3) 70%);
+    box-shadow:0 0 60px color-mix(in srgb, var(--c2) 70%, transparent);
+    transition:background 1.2s ease, box-shadow 1.2s ease;
+    animation:breathe 3.2s ease-in-out infinite;
+  }
+  @keyframes breathe{0%,100%{transform:scale(1);}50%{transform:scale(1.08);}}
+
+  /* ===== SPREADSHEET ===== */
+  .sheet-wrap{display:flex;align-items:center;gap:34px;margin-top:26px;flex-wrap:wrap;justify-content:center;}
+  .sheet-grid{
+    display:grid;grid-template-columns:repeat(4,32px);grid-template-rows:repeat(5,26px);gap:4px;
+    padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--glass);
+  }
+  .cell{background:rgba(255,255,255,.05);border-radius:3px;transition:background .3s ease;}
+  .cell.on{background:linear-gradient(135deg,var(--c1),var(--c2));}
+  .sheet-arrow{width:52px;height:1px;background:linear-gradient(90deg,var(--c2),var(--c3));position:relative;}
+  .node-cluster{display:flex;flex-direction:column;gap:8px;}
+  .node{display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--ink-dim);}
+  .node i{width:7px;height:7px;border-radius:50%;background:var(--c2);box-shadow:0 0 8px var(--c2);}
+
+  /* ===== RESULT INDICATORS ===== */
+  .stats{display:flex;gap:60px;margin-top:24px;flex-wrap:wrap;justify-content:center;}
+
+  /* ===== GRID DE CATEGORIAS DE AUTOMAÇÃO ===== */
+  .cat-grid{
+    display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:16px;
+    margin-top:30px;max-width:920px;width:100%;
+  }
+  @media (max-width:760px){ .cat-grid{grid-template-columns:repeat(2,1fr);} }
+  .cat-card{
+    padding:20px 16px;border:1px solid var(--line);border-radius:14px;
+    background:var(--glass);backdrop-filter:blur(10px);text-align:left;
+    transition:border-color .3s ease, transform .3s ease;
+  }
+  .cat-card:hover{border-color:var(--c2);transform:translateY(-3px);}
+  .cat-card .cat-icon{
+    width:34px;height:34px;border-radius:9px;margin-bottom:12px;
+    background:linear-gradient(135deg,var(--c1),var(--c2));
+    box-shadow:0 0 16px color-mix(in srgb, var(--c2) 45%, transparent);
+    transition:background 1.2s ease;
+  }
+  .cat-card h3{font-family:'Space Grotesk',sans-serif;font-size:14px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink);margin-bottom:8px;}
+  .cat-card p{font-size:13px;line-height:1.55;color:var(--ink-dim);font-weight:300;}
+
+  /* ===== SEÇÃO PLANILHAS À VENDA ===== */
+  .shop-cards{display:flex;gap:22px;margin-top:30px;flex-wrap:wrap;justify-content:center;max-width:820px;}
+  .shop-card{
+    flex:1 1 300px;max-width:360px;padding:26px 24px;text-align:left;
+    border:1px solid var(--line);border-radius:16px;background:var(--glass);backdrop-filter:blur(10px);
+  }
+  .shop-card .shop-num{font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:700;color:var(--c2);margin-bottom:6px;transition:color 1.2s ease;}
+  .shop-card h3{font-size:15px;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;font-family:'Space Grotesk',sans-serif;}
+  .shop-card p{font-size:13.5px;line-height:1.6;color:var(--ink-dim);font-weight:300;}
+  .stat{max-width:220px;}
+  .stat .num{font-family:'Space Grotesk',sans-serif;font-size:15px;letter-spacing:3px;text-transform:uppercase;color:var(--c2);transition:color 1.2s ease;margin-bottom:10px;}
+  .stat p{font-size:14px;color:var(--ink-dim);}
+
+  /* ===== CONTACT ===== */
+  .contact-btns{display:flex;gap:18px;margin-top:22px;flex-wrap:wrap;justify-content:center;}
+  .cbtn{
+    display:flex;align-items:center;gap:12px;padding:16px 28px;border-radius:999px;
+    border:1px solid var(--line);background:var(--glass);backdrop-filter:blur(10px);
+    font-size:13px;letter-spacing:1px;text-transform:uppercase;color:var(--ink);
+    transition:all .3s ease;
+  }
+  .cbtn svg{width:18px;height:18px;fill:currentColor;}
+  .cbtn:hover{border-color:var(--c2);color:var(--c2);box-shadow:0 0 26px color-mix(in srgb, var(--c2) 35%, transparent);transform:translateY(-2px);}
+
+  /* ===== FOOTER ===== */
+  footer{
+    position:relative;z-index:2;padding:50px 6vw 34px;border-top:1px solid var(--line);
+    display:flex;flex-direction:column;align-items:center;gap:20px;text-align:center;
+  }
+  footer .flogo{font-size:14px;letter-spacing:3px;text-transform:uppercase;}
+  footer .ftag{font-size:11px;color:var(--ink-faint);letter-spacing:1.5px;}
+  .fsocial{display:flex;gap:22px;}
+  .fsocial a{color:var(--ink-dim);transition:color .25s;}
+  .fsocial a:hover{color:var(--c2);}
+  .fsocial svg{width:17px;height:17px;fill:currentColor;}
+  .fcopy{font-size:10.5px;color:var(--ink-faint);letter-spacing:.5px;}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<canvas id="planet-canvas"></canvas>
+
+<nav>
+  <div class="logo"><img class="logo-mark" src="xxi-logo.png" alt="XXI System">XXI SYSTEM</div>
+  <div class="nav-links">
+    <a href="#automacao"><span>Automação</span></a>
+    <a href="#ia"><span>IA</span></a>
+    <a href="#robos"><span>Robôs</span></a>
+    <a href="#planilhas"><span>Planilhas</span></a>
+  </div>
+  <a href="#contato" class="nav-cta"><span>Fale conosco</span></a>
+</nav>
+
+<div class="wrap">
+
+  <!-- HERO -->
+  <section class="hero" id="hero" data-theme="hero">
+    <div class="eyebrow reveal in-view">XXI SYSTEM · Automação &amp; IA</div>
+    <h1 class="title reveal up in-view">Automatize o que<br><span class="grad-text">consome seu tempo.</span></h1>
+    <p class="lede reveal up2 in-view">Somos uma empresa de tecnologia que cria automações inteligentes para microempreendedores e empresas de todos os portes, unindo IA, robôs e processos sob medida para o seu negócio.</p>
+    <div class="hero-cta reveal up3 in-view">
+      <a href="#automacao" class="btn primary">Conheça nossas soluções</a>
+      <a href="#contato" class="btn ghost">Fale conosco</a>
+    </div>
+    <div class="scroll-cue">Role para explorar</div>
+  </section>
+
+  <!-- AUTOMAÇÃO -->
+  <section id="automacao" data-theme="automacao">
+    <div class="eyebrow reveal">Automação de processos</div>
+    <h2 class="title reveal up">Seu processo. <span class="grad-text">Automatizado.</span></h2>
+    <p class="lede reveal up2">Eliminamos tarefas repetitivas e transformamos processos manuais em fluxos rápidos, inteligentes e eficientes.</p>
+    <div class="flow reveal up3">
+      <div class="flow-step"><div class="dot"></div><span>Planilha</span></div>
+      <div class="flow-arrow"></div>
+      <div class="flow-step"><div class="dot"></div><span>Dados</span></div>
+      <div class="flow-arrow"></div>
+      <div class="flow-step"><div class="dot"></div><span>Automação</span></div>
+      <div class="flow-arrow"></div>
+      <div class="flow-step"><div class="dot"></div><span>Resultado</span></div>
+    </div>
+  </section>
+
+  <!-- IA -->
+  <section id="ia" data-theme="ia">
+    <div class="eyebrow reveal">Inteligência artificial</div>
+    <h2 class="title reveal up">IA trabalhando a favor <span class="grad-text">do seu negócio.</span></h2>
+    <p class="lede reveal up2">Utilizamos inteligência artificial para analisar informações, organizar dados, gerar respostas e automatizar decisões.</p>
+    <div class="ai-core-wrap reveal up3">
+      <div class="ai-ring r1"></div>
+      <div class="ai-ring r2"></div>
+      <div class="ai-ring r3"></div>
+      <div class="ai-core"></div>
+    </div>
+  </section>
+
+  <!-- ROBÔS -->
+  <section id="robos" data-theme="robos">
+    <div class="eyebrow reveal">Robôs automatizados</div>
+    <h2 class="title reveal up">Robôs que <span class="grad-text">trabalham por você.</span></h2>
+    <p class="lede reveal up2">Automatizamos tarefas repetitivas para que sua equipe possa focar no que realmente importa.</p>
+    <div class="flow reveal up3">
+      <div class="flow-step"><div class="dot"></div><span>Abrir sistema</span></div>
+      <div class="flow-arrow"></div>
+      <div class="flow-step"><div class="dot"></div><span>Processar</span></div>
+      <div class="flow-arrow"></div>
+      <div class="flow-step"><div class="dot"></div><span>Executar</span></div>
+      <div class="flow-arrow"></div>
+      <div class="flow-step"><div class="dot"></div><span>Finalizar</span></div>
+    </div>
+  </section>
+
+  <!-- CATEGORIAS DE AUTOMAÇÃO -->
+  <section id="categorias" data-theme="robos">
+    <div class="eyebrow reveal">O que os robôs fazem</div>
+    <h2 class="title reveal up">Automações para <span class="grad-text">cada área do seu negócio.</span></h2>
+    <p class="lede reveal up2">Cada robô é treinado para uma função específica. Veja o que cada um deles resolve no dia a dia da sua empresa.</p>
+    <div class="cat-grid reveal up3">
+      <div class="cat-card"><div class="cat-icon"></div><h3>Financeiro</h3><p>Fluxo de caixa, contas a pagar/receber, conciliação bancária e emissão de boletos e notas de forma automática.</p></div>
+      <div class="cat-card"><div class="cat-icon"></div><h3>Estoque</h3><p>Controle de entradas e saídas, alertas de reposição e integração automática com fornecedores.</p></div>
+      <div class="cat-card"><div class="cat-icon"></div><h3>Atendimento</h3><p>Robôs que respondem clientes 24h, qualificam leads e direcionam cada conversa para o time certo.</p></div>
+      <div class="cat-card"><div class="cat-icon"></div><h3>Vendas</h3><p>Automatiza follow-up, funil de vendas, geração de orçamentos e emissão de pedidos.</p></div>
+      <div class="cat-card"><div class="cat-icon"></div><h3>Marketing</h3><p>Dispara campanhas, agenda publicações e organiza dados de clientes para ações mais direcionadas.</p></div>
+      <div class="cat-card"><div class="cat-icon"></div><h3>Produção</h3><p>Acompanha ordens de produção, prazos e etapas do processo fabril ou operacional em tempo real.</p></div>
+      <div class="cat-card"><div class="cat-icon"></div><h3>Relatórios</h3><p>Gera relatórios automáticos e dashboards sempre atualizados, sem trabalho manual.</p></div>
+      <div class="cat-card"><div class="cat-icon"></div><h3>Outro</h3><p>Tem um processo diferente? Criamos automações sob medida para qualquer necessidade da sua empresa.</p></div>
+    </div>
+  </section>
+
+  <!-- PLANILHAS -->
+  <section id="planilhas" data-theme="planilhas">
+    <div class="eyebrow reveal">Planilhas &amp; dados</div>
+    <h2 class="title reveal up">Transforme suas planilhas em <span class="grad-text">processos inteligentes.</span></h2>
+    <p class="lede reveal up2">Automatizamos planilhas, organização de dados, relatórios e processos que normalmente consomem horas da sua equipe.</p>
+    <div class="sheet-wrap reveal up3">
+      <div class="sheet-grid" id="sheetGrid"></div>
+      <div class="sheet-arrow"></div>
+      <div class="node-cluster">
+        <div class="node"><i></i>Dados organizados</div>
+        <div class="node"><i></i>Relatórios automáticos</div>
+        <div class="node"><i></i>Processos conectados</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LOJA DE PLANILHAS E PROMPTS -->
+  <section id="loja" data-theme="planilhas">
+    <div class="eyebrow reveal">Planilhas & prompts</div>
+    <h2 class="title reveal up">Prontas para usar ou <span class="grad-text">feitas do seu jeito.</span></h2>
+    <p class="lede reveal up2">Além das automações, também vendemos prompts de comando para você criar suas próprias planilhas de fluxo de caixa e gestão financeira, além de um catálogo com milhares de planilhas prontas para agilizar o seu dia a dia.</p>
+    <div class="shop-cards reveal up3">
+      <div class="shop-card">
+        <div class="shop-num">Prompts</div>
+        <h3>Comandos prontos para IA</h3>
+        <p>Prompts de comando testados para você gerar suas próprias planilhas de fluxo de caixa, controle financeiro e muito mais, direto com sua ferramenta de IA preferida.</p>
+      </div>
+      <div class="shop-card">
+        <div class="shop-num">+15.000</div>
+        <h3>Planilhas prontas</h3>
+        <p>Um catálogo com mais de 15 mil planilhas separadas por categoria — financeiro, estoque, vendas e muito mais — prontas para baixar e usar na hora.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULTADO -->
+  <section id="resultado" data-theme="planilhas">
+    <div class="eyebrow reveal">Resultado</div>
+    <h2 class="title reveal up">Menos trabalho manual. <span class="grad-text">Mais resultado.</span></h2>
+    <div class="stats reveal up2">
+      <div class="stat"><div class="num">Tempo</div><p>Menos tarefas repetitivas.</p></div>
+      <div class="stat"><div class="num">Eficiência</div><p>Processos mais rápidos.</p></div>
+      <div class="stat"><div class="num">Inteligência</div><p>Decisões baseadas em dados.</p></div>
+    </div>
+  </section>
+
+  <!-- CONTATO -->
+  <section id="contato" data-theme="contato">
+    <div class="eyebrow reveal">Vamos conversar</div>
+    <h2 class="title reveal up">Vamos automatizar <span class="grad-text">seu próximo processo?</span></h2>
+    <p class="lede reveal up2">Conte-nos o que você gostaria de automatizar.</p>
+    <div class="contact-btns reveal up3">
+      <a class="cbtn" id="igBtn" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24"><path d="M12 2.2c3.2 0 3.6 0 4.9.07 1.2.06 2 .25 2.4.42.6.24 1 .53 1.5 1s.76.9 1 1.5c.17.4.36 1.2.42 2.4.07 1.3.07 1.7.07 4.9s0 3.6-.07 4.9c-.06 1.2-.25 2-.42 2.4a4 4 0 0 1-1 1.5 4 4 0 0 1-1.5 1c-.4.17-1.2.36-2.4.42-1.3.07-1.7.07-4.9.07s-3.6 0-4.9-.07c-1.2-.06-2-.25-2.4-.42a4 4 0 0 1-1.5-1 4 4 0 0 1-1-1.5c-.17-.4-.36-1.2-.42-2.4C2.2 15.6 2.2 15.2 2.2 12s0-3.6.07-4.9c.06-1.2.25-2 .42-2.4a4 4 0 0 1 1-1.5 4 4 0 0 1 1.5-1c.4-.17 1.2-.36 2.4-.42C8.4 2.2 8.8 2.2 12 2.2zm0 1.8c-3.15 0-3.5 0-4.75.07-1 .04-1.5.2-1.86.34-.47.18-.8.4-1.15.75s-.57.68-.75 1.15c-.14.36-.3.86-.34 1.86C3.05 9.2 3.05 9.55 3.05 12.7v-1.4c0 3.15 0 3.5.07 4.75.04 1 .2 1.5.34 1.86.18.47.4.8.75 1.15s.68.57 1.15.75c.36.14.86.3 1.86.34 1.25.07 1.6.07 4.75.07s3.5 0 4.75-.07c1-.04 1.5-.2 1.86-.34.47-.18.8-.4 1.15-.75s.57-.68.75-1.15c.14-.36.3-.86.34-1.86.07-1.25.07-1.6.07-4.75s0-3.5-.07-4.75c-.04-1-.2-1.5-.34-1.86a3 3 0 0 0-.75-1.15 3 3 0 0 0-1.15-.75c-.36-.14-.86-.3-1.86-.34C15.5 4 15.15 4 12 4zm0 3.4a4.6 4.6 0 1 1 0 9.2 4.6 4.6 0 0 1 0-9.2zm0 1.8a2.8 2.8 0 1 0 0 5.6 2.8 2.8 0 0 0 0-5.6zm5.85-2a1.08 1.08 0 1 1-2.15 0 1.08 1.08 0 0 1 2.15 0z"/></svg>
+        Instagram
+      </a>
+      <a class="cbtn" id="waBtn" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2zm0 1.8a8.2 8.2 0 0 1 6.9 12.6l-.2.35.6 2.2-2.25-.6-.35.2A8.2 8.2 0 1 1 12 3.8zm-3.2 4c-.2 0-.5 0-.7.3-.25.28-1 1-1 2.35s1 2.7 1.14 2.9c.14.17 2 3.15 4.9 4.4 2.4 1 2.9.85 3.4.8.5-.05 1.65-.68 1.9-1.33.22-.65.22-1.2.16-1.33-.07-.13-.25-.2-.5-.33s-1.5-.75-1.75-.83c-.24-.1-.4-.14-.6.13-.16.28-.68.83-.83 1-.15.16-.3.18-.57.06-.27-.13-1.14-.42-2.16-1.35-.8-.7-1.34-1.58-1.5-1.86-.16-.27 0-.42.13-.55.13-.13.28-.34.42-.5.14-.17.18-.28.28-.47.1-.2.05-.36 0-.5-.06-.14-.6-1.5-.85-2.05-.22-.53-.44-.46-.6-.47h-.5z"/></svg>
+        WhatsApp
+      </a>
+      <a class="cbtn" id="tgBtn" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24"><path d="M21.9 4.3 18.6 20c-.25 1.1-.9 1.37-1.83.85l-5-3.7-2.42 2.33c-.27.27-.5.5-1 .5l.36-5.1L18.4 6.2c.42-.37-.1-.58-.66-.2L6.7 13.35 1.8 11.8c-1.06-.34-1.08-1.06.22-1.57L20.6 3.15c.88-.32 1.66.2 1.3 1.15z"/></svg>
+        Telegram
+      </a>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <img class="logo-mark" style="width:36px;height:36px;margin-bottom:4px;" src="xxi-logo.png" alt="XXI System"><div class="flogo">XXI SYSTEM</div>
+  <div class="ftag">Automação • IA • Robôs • Tecnologia</div>
+  <div class="fsocial">
+    <a id="igFoot" target="_blank" rel="noopener noreferrer">
+      <svg viewBox="0 0 24 24"><path d="M12 2.2c3.2 0 3.6 0 4.9.07 1.2.06 2 .25 2.4.42.6.24 1 .53 1.5 1s.76.9 1 1.5c.17.4.36 1.2.42 2.4.07 1.3.07 1.7.07 4.9s0 3.6-.07 4.9c-.06 1.2-.25 2-.42 2.4a4 4 0 0 1-1 1.5 4 4 0 0 1-1.5 1c-.4.17-1.2.36-2.4.42-1.3.07-1.7.07-4.9.07s-3.6 0-4.9-.07c-1.2-.06-2-.25-2.4-.42a4 4 0 0 1-1.5-1 4 4 0 0 1-1-1.5c-.17-.4-.36-1.2-.42-2.4C2.2 15.6 2.2 15.2 2.2 12s0-3.6.07-4.9c.06-1.2.25-2 .42-2.4a4 4 0 0 1 1-1.5 4 4 0 0 1 1.5-1c.4-.17 1.2-.36 2.4-.42C8.4 2.2 8.8 2.2 12 2.2zm0 3.2a6.6 6.6 0 1 0 0 13.2 6.6 6.6 0 0 0 0-13.2zm0 1.8a4.8 4.8 0 1 1 0 9.6 4.8 4.8 0 0 1 0-9.6zm5.85-2a1.08 1.08 0 1 1-2.15 0 1.08 1.08 0 0 1 2.15 0z"/></svg>
+    </a>
+    <a id="waFoot" target="_blank" rel="noopener noreferrer">
+      <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2zm0 1.8a8.2 8.2 0 0 1 6.9 12.6l-.2.35.6 2.2-2.25-.6-.35.2A8.2 8.2 0 1 1 12 3.8z"/></svg>
+    </a>
+    <a id="tgFoot" target="_blank" rel="noopener noreferrer">
+      <svg viewBox="0 0 24 24"><path d="M21.9 4.3 18.6 20c-.25 1.1-.9 1.37-1.83.85l-5-3.7-2.42 2.33c-.27.27-.5.5-1 .5l.36-5.1L18.4 6.2c.42-.37-.1-.58-.66-.2L6.7 13.35 1.8 11.8c-1.06-.34-1.08-1.06.22-1.57L20.6 3.15c.88-.32 1.66.2 1.3 1.15z"/></svg>
+    </a>
+  </div>
+  <div class="fcopy">© 2026 XXI SYSTEM — Todos os direitos reservados.</div>
+</footer>
+
+<script>
+/* =========================================================
+   CONFIGURAÇÃO DE CONTATO — substitua pelos links reais
+   ========================================================= */
+const INSTAGRAM_URL = "https://instagram.com/SEU_PERFIL";
+const WHATSAPP_URL  = "https://wa.me/55SEUNUMERO?text=" + encodeURIComponent("Olá! Gostaria de saber mais sobre as soluções de automação.");
+const TELEGRAM_URL  = "https://t.me/SEU_USUARIO";
+
+['igBtn','igFoot'].forEach(id => document.getElementById(id).href = INSTAGRAM_URL);
+['waBtn','waFoot'].forEach(id => document.getElementById(id).href = WHATSAPP_URL);
+['tgBtn','tgFoot'].forEach(id => document.getElementById(id).href = TELEGRAM_URL);
+
+/* =========================================================
+   COR CONTÍNUA CONFORME O SCROLL — começa azul, termina roxo
+   (um único sistema controla tudo: nav, botões, planeta e texto)
+   ========================================================= */
+const root = document.documentElement;
+
+function hexToRgb(hex){
+  const n = parseInt(hex.slice(1), 16);
+  return [(n>>16)&255, (n>>8)&255, n&255];
+}
+function mixHex(a, b, t){
+  const ca = hexToRgb(a), cb = hexToRgb(b);
+  const r = Math.round(ca[0] + (cb[0]-ca[0])*t);
+  const g = Math.round(ca[1] + (cb[1]-ca[1])*t);
+  const bl = Math.round(ca[2] + (cb[2]-ca[2])*t);
+  return `rgb(${r},${g},${bl})`;
+}
+
+const START = { c1:'#2563ff', c2:'#00c2ff', c3:'#3b82f6', tint:0  }; // topo — azul
+const END   = { c1:'#7c3aed', c2:'#a855f7', c3:'#c026d3', tint:22 }; // final — roxo
+
+function getScrollT(){
+  const doc = document.documentElement;
+  const max = (doc.scrollHeight - doc.clientHeight) || 1;
+  return Math.min(1, Math.max(0, window.scrollY / max));
+}
+
+function updateColorsByScroll(){
+  const t = getScrollT();
+  root.style.setProperty('--c1', mixHex(START.c1, END.c1, t));
+  root.style.setProperty('--c2', mixHex(START.c2, END.c2, t));
+  root.style.setProperty('--c3', mixHex(START.c3, END.c3, t));
+  root.style.setProperty('--tint', Math.round(START.tint + (END.tint-START.tint)*t));
+  root.style.setProperty('--grad-a', mixHex(START.c1, END.c1, t));
+  root.style.setProperty('--grad-b', mixHex(START.c3, END.c3, Math.min(1, t+0.35)));
+}
+window.addEventListener('scroll', updateColorsByScroll, { passive:true });
+updateColorsByScroll();
+
+/* =========================================================
+   SCROLL REVEAL (entra e sai suavemente)
+   ========================================================= */
+const revealEls = document.querySelectorAll('.reveal');
+const sectionObs = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if(e.isIntersecting){
+      e.target.classList.remove('fade-out');
+      e.target.classList.add('in-view');
+    } else {
+      e.target.classList.remove('in-view');
+      e.target.classList.add('fade-out');
+    }
+  });
+}, { threshold: 0.22 });
+revealEls.forEach(el => sectionObs.observe(el));
+
+/* =========================================================
+   GRID DE PLANILHA — acende células gradualmente
+   ========================================================= */
+const grid = document.getElementById('sheetGrid');
+for(let i=0;i<20;i++){ const c=document.createElement('div'); c.className='cell'; grid.appendChild(c); }
+const cells = grid.querySelectorAll('.cell');
+const gridObs = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      cells.forEach((c,i)=> setTimeout(()=>c.classList.add('on'), i*60));
+    } else {
+      cells.forEach(c=>c.classList.remove('on'));
+    }
+  });
+},{threshold:0.4});
+gridObs.observe(grid);
+
+/* =========================================================
+   FUNDO ANIMADO — estrelas distantes + chuva de meteoros
+   ========================================================= */
+const canvas = document.getElementById('bg-canvas');
+const ctx = canvas.getContext('2d');
+let w, h, stars = [], meteors = [];
+const mouse = { x: -9999, y: -9999 };
+
+function resize(){
+  w = canvas.width = window.innerWidth;
+  h = canvas.height = window.innerHeight;
+
+  const starCount = Math.min(160, Math.floor((w*h)/9000));
+  stars = Array.from({length: starCount}, () => ({
+    x: Math.random()*w, y: Math.random()*h,
+    r: Math.random()*1.3 + 0.3,
+    baseA: Math.random()*0.5 + 0.3,
+    tw: Math.random()*Math.PI*2,      // fase do brilho piscando
+    twSpeed: Math.random()*0.02 + 0.006,
+  }));
+
+  const meteorCount = Math.max(4, Math.floor(w/260));
+  meteors = Array.from({length: meteorCount}, () => spawnMeteor(true));
+}
+
+function spawnMeteor(randomY){
+  const onFire = Math.random() < 0.4; // ~40% deles pegam fogo
+  return {
+    x: Math.random()*w*1.3 - w*0.15,
+    y: randomY ? Math.random()*h : -40,
+    len: 60 + Math.random()*90,
+    speed: 3 + Math.random()*4,
+    angle: Math.PI*0.28 + (Math.random()*0.08-0.04), // caindo em diagonal
+    size: onFire ? (1.6 + Math.random()*1.4) : (1 + Math.random()*0.8),
+    onFire,
+    life: 1,
+  };
+}
+
+window.addEventListener('resize', resize);
+window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+window.addEventListener('mouseleave', () => { mouse.x = -9999; mouse.y = -9999; });
+resize();
+
+function getGlowColor(){
+  return getComputedStyle(root).getPropertyValue('--c2').trim() || '#ffffff';
+}
+function glowWithAlpha(a){
+  const c = getGlowColor();
+  const m = c.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+  if(m) return `rgba(${m[1]},${m[2]},${m[3]},${a})`;
+  return `rgba(255,255,255,${a})`;
+}
+
+function tick(){
+  ctx.clearRect(0,0,w,h);
+  const glow = getGlowColor();
+
+  /* ---- estrelas distantes, piscando devagar, leve parallax do mouse ---- */
+  const parX = (mouse.x - w/2) * 0.004;
+  const parY = (mouse.y - h/2) * 0.004;
+  stars.forEach(s => {
+    s.tw += s.twSpeed;
+    const a = s.baseA + Math.sin(s.tw) * 0.25;
+    ctx.globalAlpha = Math.max(0, a);
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(s.x + parX, s.y + parY, s.r, 0, Math.PI*2);
+    ctx.fill();
+  });
+
+  /* ---- meteoros/asteroides caindo, alguns em chamas ---- */
+  meteors.forEach((m, i) => {
+    const dx = Math.cos(m.angle) * m.speed;
+    const dy = Math.sin(m.angle) * m.speed;
+    m.x += dx; m.y += dy;
+
+    const tailX = m.x - dx * (m.len/m.speed);
+    const tailY = m.y - dy * (m.len/m.speed);
+
+    const grad = ctx.createLinearGradient(m.x, m.y, tailX, tailY);
+    if(m.onFire){
+      grad.addColorStop(0, 'rgba(255,255,255,0.95)');
+      grad.addColorStop(0.25, 'rgba(255,190,120,0.85)');
+      grad.addColorStop(0.6, 'rgba(255,90,40,0.4)');
+      grad.addColorStop(1, 'rgba(255,60,20,0)');
+    } else {
+      grad.addColorStop(0, 'rgba(255,255,255,0.9)');
+      grad.addColorStop(0.5, glowWithAlpha(0.33));
+      grad.addColorStop(1, 'rgba(255,255,255,0)');
+    }
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = m.size;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(m.x, m.y);
+    ctx.lineTo(tailX, tailY);
+    ctx.stroke();
+
+    // núcleo brilhante na cabeça do meteoro
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = m.onFire ? '#fff3d6' : '#ffffff';
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, m.size*0.9, 0, Math.PI*2);
+    ctx.fill();
+
+    // reciclar quando sai da tela
+    if(m.x - m.len > w + 60 || m.y - m.len > h + 60){
+      meteors[i] = spawnMeteor(false);
+    }
+  });
+
+  ctx.globalAlpha = 1;
+  requestAnimationFrame(tick);
+}
+tick();
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
+        onerror="this.onerror=null;var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js';s.onload=window.__initPlanet;document.head.appendChild(s);"
+        onload="window.__initPlanet && window.__initPlanet();"></script>
+<script>
+window.__initPlanet = function(){
+  if(window.__planetReady) return;
+  window.__planetReady = true;
+  if(typeof THREE === 'undefined'){ console.error('Three.js não carregou.'); return; }
+  (function(){
+    'use strict';
+
+    const canvas = document.getElementById('planet-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 100);
+    camera.position.set(0, 0, 6.4);
+
+    /* luzes */
+    const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+    sun.position.set(4, 2, 4);
+    scene.add(sun);
+    scene.add(new THREE.AmbientLight(0x0a1428, 0.6));
+
+    const group = new THREE.Group();
+    group.position.set(1.85, -0.4, 0);
+    group.rotation.z = THREE.MathUtils.degToRad(16);
+    group.rotation.x = THREE.MathUtils.degToRad(-18);
+    scene.add(group);
+
+    /* textura procedural — superfície escura com continentes discretos */
+    function buildSurfaceTexture(){
+      const size = 1024;
+      const cnv = document.createElement('canvas');
+      cnv.width = size; cnv.height = size/2;
+      const ctx = cnv.getContext('2d');
+      ctx.fillStyle = '#04070f';
+      ctx.fillRect(0,0,cnv.width,cnv.height);
+      for(let i=0;i<40;i++){
+        const cx = Math.random()*cnv.width, cy = cnv.height*0.15 + Math.random()*cnv.height*0.7;
+        const r = 26 + Math.random()*80;
+        const g = ctx.createRadialGradient(cx,cy,0,cx,cy,r);
+        g.addColorStop(0, 'rgba(28,38,54,0.55)');
+        g.addColorStop(1, 'rgba(10,16,26,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.ellipse(cx,cy,r,r*0.6,Math.random()*Math.PI,0,Math.PI*2); ctx.fill();
+      }
+      return new THREE.CanvasTexture(cnv);
+    }
+
+    const PLANET_R = 1.55;
+    const planetGeo = new THREE.SphereGeometry(PLANET_R, 72, 72);
+    const planetMat = new THREE.MeshStandardMaterial({
+      map: buildSurfaceTexture(), roughness:0.9, metalness:0.1,
+      emissive:0x03060d, emissiveIntensity:0.35
+    });
+    const planetMesh = new THREE.Mesh(planetGeo, planetMat);
+    group.add(planetMesh);
+
+    /* atmosfera — glow discreto (segue paleta preto e branco) */
+    const atmoUniforms = {
+      uColor: { value: new THREE.Color(0xffffff) },
+      uOpacity: { value: 0.12 },
+    };
+    const atmoMat = new THREE.ShaderMaterial({
+      uniforms: atmoUniforms,
+      vertexShader:`varying vec3 vN; varying vec3 vP;
+        void main(){ vN = normalize(normalMatrix*normal); vec4 mv = modelViewMatrix*vec4(position,1.0); vP = mv.xyz; gl_Position = projectionMatrix*mv; }`,
+      fragmentShader:`uniform vec3 uColor; uniform float uOpacity; varying vec3 vN; varying vec3 vP;
+        void main(){ vec3 vd = normalize(-vP); float f = pow(1.0-max(dot(vd,vN),0.0), 5.0); gl_FragColor = vec4(uColor, f*uOpacity); }`,
+      transparent:true, side:THREE.BackSide, depthWrite:false, blending:THREE.AdditiveBlending,
+    });
+    const atmoMesh = new THREE.Mesh(new THREE.SphereGeometry(PLANET_R*1.03, 72, 72), atmoMat);
+    group.add(atmoMesh);
+
+    /* anéis estilo Saturno */
+    function buildRingTexture(){
+      const size = 512;
+      const cnv = document.createElement('canvas');
+      cnv.width = size; cnv.height = 32;
+      const ctx = cnv.getContext('2d');
+      for(let x=0;x<size;x++){
+        const t = x/size;
+        const band = Math.sin(t*38) * 0.5 + 0.5;
+        const edgeFade = Math.sin(t*Math.PI);
+        const alpha = (0.18 + band*0.4) * edgeFade;
+        ctx.fillStyle = `rgba(230,230,235,${alpha.toFixed(3)})`;
+        ctx.fillRect(x,0,1,32);
+      }
+      return new THREE.CanvasTexture(cnv);
+    }
+    const ringGeo = new THREE.RingGeometry(PLANET_R*1.5, PLANET_R*2.15, 128);
+    // ajusta UVs para mapear a textura radialmente
+    const ringPos = ringGeo.attributes.position;
+    const ringUv = ringGeo.attributes.uv;
+    const v3 = new THREE.Vector3();
+    for(let i=0;i<ringPos.count;i++){
+      v3.fromBufferAttribute(ringPos, i);
+      const dist = v3.length();
+      const u = (dist - PLANET_R*1.5) / (PLANET_R*2.15 - PLANET_R*1.5);
+      ringUv.setXY(i, u, 0.5);
+    }
+    const ringMat = new THREE.MeshBasicMaterial({
+      map: buildRingTexture(), transparent:true, side:THREE.DoubleSide,
+      depthWrite:false, opacity:0.85,
+    });
+    const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+    ringMesh.position.set(0,0,0);
+    ringMesh.rotation.set(Math.PI/2, 0, 0);
+    ringMesh.renderOrder = 1;
+    group.add(ringMesh);
+
+    /* partículas orbitando */
+    const N = 55;
+    const orbit = [];
+    const positions = new Float32Array(N*3);
+    for(let i=0;i<N;i++){
+      orbit.push({ r: PLANET_R*(1.3+Math.random()*1.1), a: Math.random()*Math.PI*2, incl:(Math.random()-0.5)*1.2, spd:(0.15+Math.random()*0.2)*(Math.random()<0.5?1:-1) });
+    }
+    const orbGeo = new THREE.BufferGeometry();
+    orbGeo.setAttribute('position', new THREE.BufferAttribute(positions,3));
+    const orbMat = new THREE.PointsMaterial({ color:0xffffff, size:0.035, transparent:true, opacity:0.4, sizeAttenuation:true, depthWrite:false, blending:THREE.AdditiveBlending });
+    const orbPts = new THREE.Points(orbGeo, orbMat);
+    group.add(orbPts);
+
+    function updateOrbit(dt){
+      const arr = orbGeo.attributes.position.array;
+      orbit.forEach((d,i)=>{
+        d.a += d.spd*dt;
+        arr[i*3]   = Math.cos(d.a)*d.r;
+        arr[i*3+1] = Math.sin(d.incl)*d.r*0.35;
+        arr[i*3+2] = Math.sin(d.a)*d.r;
+      });
+      orbGeo.attributes.position.needsUpdate = true;
+    }
+
+    /* ---- rotação controlada pelo scroll ---- */
+    const rot = { speed: 0.05, velocity: 0 };   // rad/s
+    const BASE_SPEED = 0.05;   // rotação lenta contínua quando parado
+    let lastScrollY = window.scrollY || 0;
+
+    window.addEventListener('scroll', () => {
+      const y = window.scrollY || 0;
+      const delta = y - lastScrollY;
+      lastScrollY = y;
+      // desce a página -> horário (positivo); sobe -> anti-horário (negativo)
+      rot.velocity += delta * 0.006;
+      rot.velocity = Math.max(-2.2, Math.min(2.2, rot.velocity));
+    }, { passive:true });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth/window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    const clock = new THREE.Clock();
+    function animate(){
+      requestAnimationFrame(animate);
+      const dt = Math.min(clock.getDelta(), 0.05);
+
+      /* a velocidade extra do scroll decai suavemente até sobrar só a rotação base */
+      rot.velocity *= 0.94;
+      const currentSpeed = BASE_SPEED * (rot.velocity >= 0 ? 1 : -1) * (Math.abs(rot.velocity) > 0.02 ? 1 : 1)
+                            + rot.velocity;
+
+      planetMesh.rotation.y += (BASE_SPEED + rot.velocity) * dt;
+      atmoMesh.rotation.y = planetMesh.rotation.y;
+
+      /* atmosfera acompanha a cor da seção atual */
+      const glow = getComputedStyle(root).getPropertyValue('--c2').trim() || '#ffffff';
+      atmoUniforms.uColor.value.set(glow);
+
+      updateOrbit(dt);
+      renderer.render(scene, camera);
+    }
+    animate();
+  })();
+};
+if(typeof THREE !== 'undefined'){ window.__initPlanet(); }
+</script>
+
+</body>
+</html>
